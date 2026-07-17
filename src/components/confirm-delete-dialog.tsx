@@ -17,6 +17,7 @@ interface IConfirmDeleteDialogProps {
   readonly title: string
   readonly description: string
   readonly onConfirm: () => void
+  readonly confirmLabel?: string
 }
 
 export function ConfirmDeleteDialog({
@@ -25,6 +26,7 @@ export function ConfirmDeleteDialog({
   title,
   description,
   onConfirm,
+  confirmLabel = 'Excluir',
 }: IConfirmDeleteDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -42,7 +44,7 @@ export function ConfirmDeleteDialog({
               onOpenChange(false)
             }}
           >
-            Excluir
+            {confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

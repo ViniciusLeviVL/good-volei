@@ -5,6 +5,7 @@ import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
+import { fireBottomConfetti } from '@/components/ui/confetti'
 import { canDrawTeams } from '@/lib/draw-teams'
 import { getEnabledPlayers } from '@/lib/team-stats'
 import { useTeamDrawStore } from '@/store/team-draw-store'
@@ -37,6 +38,7 @@ export function DrawSection() {
           return
         }
 
+        fireBottomConfetti()
         toast.success('Times sorteados')
       }, 280)
     })
