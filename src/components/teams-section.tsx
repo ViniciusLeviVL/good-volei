@@ -32,7 +32,7 @@ import {
   getTeamPlayers,
 } from '@/lib/team-stats'
 import { useTeamDrawStore } from '@/store/team-draw-store'
-import type { ITeam } from '@/types'
+import { type ITeam, PLAYER_GENDER_LABELS } from '@/types'
 
 export function TeamsSection() {
   const players = useTeamDrawStore((state) => state.players)
@@ -51,7 +51,7 @@ export function TeamsSection() {
   function handleCreate(values: ITeamFormSchema): void {
     addTeam(values)
     setIsCreateOpen(false)
-    toast.success('Team created')
+    toast.success('Time criado')
   }
 
   function handleRename(values: ITeamFormSchema): void {
@@ -60,32 +60,33 @@ export function TeamsSection() {
     }
     renameTeam(editingTeam.id, values.name)
     setEditingTeam(null)
-    toast.success('Team renamed')
+    toast.success('Time renomeado')
   }
 
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="font-heading font-semibold text-base">Teams</h2>
+          <h2 className="font-heading font-semibold text-base">Times</h2>
           <p className="text-muted-foreground text-xs">
-            {teams.length} teams · lock players after a draw
+            {teams.length} time{teams.length === 1 ? '' : 's'} · bloqueie
+            jogadores após o sorteio
           </p>
         </div>
         <Button size="sm" onClick={() => setIsCreateOpen(true)}>
           <PlusIcon data-icon="inline-start" />
-          Add
+          Adicionar
         </Button>
       </div>
 
       {teams.length === 0 ? (
         <EmptyState
           icon={ShieldIcon}
-          title="No teams yet"
-          description="Create at least two teams, then draw to distribute players fairly."
+          title="Nenhum time ainda"
+          description="Crie pelo menos dois times e depois sorteie para distribuir os jogadores de forma justa."
           action={
             <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-              Create first team
+              Criar primeiro time
             </Button>
           }
         />
@@ -105,12 +106,13 @@ export function TeamsSection() {
                           {team.name}
                         </h3>
                         <Badge variant="outline">
-                          {stats.playerCount} players
+                          {stats.playerCount}{' '}
+                          {stats.playerCount === 1 ? 'jogador' : 'jogadores'}
                         </Badge>
                       </div>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground text-xs">
-                        <span>Skill {stats.skillTotal.toFixed(1)}</span>
-                        <span>Avg {stats.skillAverage.toFixed(1)}</span>
+                        <span>Habilidade {stats.skillTotal.toFixed(1)}</span>
+                        <span>Média {stats.skillAverage.toFixed(1)}</span>
                         <span>
                           {stats.maleCount}M / {stats.femaleCount}F
                         </span>
@@ -120,7 +122,7 @@ export function TeamsSection() {
                       <Button
                         size="icon-sm"
                         variant="ghost"
-                        aria-label={`Rename ${team.name}`}
+                        aria-label={`Renomear ${team.name}`}
                         onClick={() => setEditingTeam(team)}
                       >
                         <PencilIcon />
@@ -128,7 +130,7 @@ export function TeamsSection() {
                       <Button
                         size="icon-sm"
                         variant="ghost"
-                        aria-label={`Delete ${team.name}`}
+                        aria-label={`Excluir ${team.name}`}
                         onClick={() => setDeletingTeam(team)}
                       >
                         <Trash2Icon />
@@ -138,7 +140,8 @@ export function TeamsSection() {
 
                   {teamPlayers.length === 0 ? (
                     <p className="px-3 py-4 text-muted-foreground text-xs">
-                      No players assigned yet. Run a draw to fill this team.
+                      Nenhum jogador atribuído ainda. Faça um sorteio para
+                      preencher este time.
                     </p>
                   ) : (
                     <ul className="divide-y divide-border/60">
@@ -157,11 +160,8 @@ export function TeamsSection() {
                                 <p className="truncate text-sm">
                                   {player.name}
                                 </p>
-                                <Badge
-                                  variant="secondary"
-                                  className="capitalize"
-                                >
-                                  {player.gender}
+                                <Badge variant="secondary">
+                                  {PLAYER_GENDER_LABELS[player.gender]}
                                 </Badge>
                               </div>
                               <SkillStarsDisplay value={player.skill} />
@@ -171,8 +171,8 @@ export function TeamsSection() {
                               variant={isLocked ? 'secondary' : 'ghost'}
                               aria-label={
                                 isLocked
-                                  ? `Unlock ${player.name}`
-                                  : `Lock ${player.name}`
+                                  ? `Desbloquear ${player.name}`
+                                  : `Bloquear ${player.name}`
                               }
                               onClick={() =>
                                 togglePlayerLock(team.id, player.id)
@@ -195,13 +195,14 @@ export function TeamsSection() {
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create team</DialogTitle>
+            <DialogTitle>Criar time</DialogTitle>
             <DialogDescription>
-              Give the team a name. You need at least two teams to draw.
+              Dê um nome ao time. Você precisa de pelo menos dois times para
+              sortear.
             </DialogDescription>
           </DialogHeader>
           <TeamForm
-            submitLabel="Create team"
+            submitLabel="Criar time"
             onCancel={() => setIsCreateOpen(false)}
             onSubmit={handleCreate}
           />
@@ -218,15 +219,15 @@ export function TeamsSection() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Rename team</DialogTitle>
+            <DialogTitle>Renomear time</DialogTitle>
             <DialogDescription>
-              Update the display name for this team.
+              Atualize o nome de exibição deste time.
             </DialogDescription>
           </DialogHeader>
           {editingTeam ? (
             <TeamForm
               key={editingTeam.id}
-              submitLabel="Save name"
+              submitLabel="Salvar nome"
               defaultValues={{ name: editingTeam.name }}
               onCancel={() => setEditingTeam(null)}
               onSubmit={handleRename}
@@ -242,14 +243,14 @@ export function TeamsSection() {
             setDeletingTeam(null)
           }
         }}
-        title="Delete team?"
-        description={`Players on ${deletingTeam?.name ?? 'this team'} will become unassigned.`}
+        title="Excluir time?"
+        description={`Os jogadores de ${deletingTeam?.name ?? 'este time'} ficarão sem time.`}
         onConfirm={() => {
           if (!deletingTeam) {
             return
           }
           deleteTeam(deletingTeam.id)
-          toast.success('Team deleted')
+          toast.success('Time excluído')
         }}
       />
     </section>

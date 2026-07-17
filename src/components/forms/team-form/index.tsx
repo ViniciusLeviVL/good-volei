@@ -36,10 +36,10 @@ export function TeamForm({
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="team-name">Name</Label>
+        <Label htmlFor="team-name">Nome</Label>
         <Input
           id="team-name"
-          placeholder="Team name"
+          placeholder="Nome do time"
           aria-invalid={Boolean(errors.name)}
           {...register('name')}
         />
@@ -51,7 +51,7 @@ export function TeamForm({
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         {onCancel ? (
           <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
+            Cancelar
           </Button>
         ) : null}
         <Button type="submit" disabled={isSubmitting}>

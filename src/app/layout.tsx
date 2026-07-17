@@ -16,9 +16,9 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Good Vôlei | Team Draw',
+  title: 'Good Vôlei | Sorteio de Times',
   description:
-    'Register players and teams, then draw balanced volleyball squads locally.',
+    'Cadastre jogadores e times e sorteie equipes de vôlei equilibradas, tudo localmente.',
 }
 
 export default function RootLayout({
@@ -28,7 +28,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="pt-BR"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col font-sans">

@@ -30,7 +30,7 @@ export function SkillRatingInput({ value, onChange }: ISkillRatingInputProps) {
   return (
     <div className="flex flex-col gap-2">
       <fieldset className="flex items-center gap-1 border-0 p-0">
-        <legend className="sr-only">Skill rating</legend>
+        <legend className="sr-only">Avaliação de habilidade</legend>
         {Array.from({ length: starCount }, (_, index) => {
           const starValue = index + 1
           const fillAmount = Math.min(1, Math.max(0, value - index))
@@ -42,13 +42,13 @@ export function SkillRatingInput({ value, onChange }: ISkillRatingInputProps) {
             >
               <button
                 type="button"
-                aria-label={`${starValue - 0.5} stars`}
+                aria-label={`${starValue - 0.5} estrelas`}
                 className="absolute inset-y-0 left-0 z-10 w-1/2"
                 onClick={() => handleStarClick(starValue, true)}
               />
               <button
                 type="button"
-                aria-label={`${starValue} stars`}
+                aria-label={`${starValue} estrelas`}
                 className="absolute inset-y-0 right-0 z-10 w-1/2"
                 onClick={() => handleStarClick(starValue, false)}
               />

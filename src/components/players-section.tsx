@@ -20,7 +20,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useTeamDrawStore } from '@/store/team-draw-store'
-import type { IPlayer } from '@/types'
+import { type IPlayer, PLAYER_GENDER_LABELS } from '@/types'
 
 export function PlayersSection() {
   const players = useTeamDrawStore((state) => state.players)
@@ -38,10 +38,12 @@ export function PlayersSection() {
     try {
       addPlayer(values)
       setIsCreateOpen(false)
-      toast.success('Player added')
+      toast.success('Jogador adicionado')
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Unable to add player.',
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível adicionar o jogador.',
       )
     }
   }
@@ -54,10 +56,12 @@ export function PlayersSection() {
     try {
       updatePlayer({ id: editingPlayer.id, ...values })
       setEditingPlayer(null)
-      toast.success('Player updated')
+      toast.success('Jogador atualizado')
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Unable to update player.',
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível atualizar o jogador.',
       )
     }
   }
@@ -66,25 +70,25 @@ export function PlayersSection() {
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="font-heading font-semibold text-base">Players</h2>
+          <h2 className="font-heading font-semibold text-base">Jogadores</h2>
           <p className="text-muted-foreground text-xs">
-            {players.length} registered
+            {players.length} cadastrado{players.length === 1 ? '' : 's'}
           </p>
         </div>
         <Button size="sm" onClick={() => setIsCreateOpen(true)}>
           <PlusIcon data-icon="inline-start" />
-          Add
+          Adicionar
         </Button>
       </div>
 
       {players.length === 0 ? (
         <EmptyState
           icon={UsersIcon}
-          title="No players yet"
-          description="Add players with name, skill, and gender to start building balanced teams."
+          title="Nenhum jogador ainda"
+          description="Adicione jogadores com nome, habilidade e gênero para começar a montar times equilibrados."
           action={
             <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-              Add first player
+              Adicionar primeiro jogador
             </Button>
           }
         />
@@ -98,8 +102,8 @@ export function PlayersSection() {
                     <p className="truncate font-medium text-sm">
                       {player.name}
                     </p>
-                    <Badge variant="secondary" className="capitalize">
-                      {player.gender}
+                    <Badge variant="secondary">
+                      {PLAYER_GENDER_LABELS[player.gender]}
                     </Badge>
                   </div>
                   <SkillStarsDisplay value={player.skill} />
@@ -108,7 +112,7 @@ export function PlayersSection() {
                   <Button
                     size="icon-sm"
                     variant="ghost"
-                    aria-label={`Edit ${player.name}`}
+                    aria-label={`Editar ${player.name}`}
                     onClick={() => setEditingPlayer(player)}
                   >
                     <PencilIcon />
@@ -116,7 +120,7 @@ export function PlayersSection() {
                   <Button
                     size="icon-sm"
                     variant="ghost"
-                    aria-label={`Delete ${player.name}`}
+                    aria-label={`Excluir ${player.name}`}
                     onClick={() => setDeletingPlayer(player)}
                   >
                     <Trash2Icon />
@@ -131,13 +135,13 @@ export function PlayersSection() {
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add player</DialogTitle>
+            <DialogTitle>Adicionar jogador</DialogTitle>
             <DialogDescription>
-              Set skill from 0 to 5 stars in half-star steps.
+              Defina a habilidade de 0 a 5 estrelas em passos de meia estrela.
             </DialogDescription>
           </DialogHeader>
           <PlayerForm
-            submitLabel="Add player"
+            submitLabel="Adicionar jogador"
             existingNames={existingNames}
             onCancel={() => setIsCreateOpen(false)}
             onSubmit={handleCreate}
@@ -155,15 +159,15 @@ export function PlayersSection() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit player</DialogTitle>
+            <DialogTitle>Editar jogador</DialogTitle>
             <DialogDescription>
-              Update name, skill, or gender for this player.
+              Atualize o nome, a habilidade ou o gênero deste jogador.
             </DialogDescription>
           </DialogHeader>
           {editingPlayer ? (
             <PlayerForm
               key={editingPlayer.id}
-              submitLabel="Save changes"
+              submitLabel="Salvar alterações"
               existingNames={existingNames}
               excludeName={editingPlayer.name}
               defaultValues={{
@@ -185,14 +189,14 @@ export function PlayersSection() {
             setDeletingPlayer(null)
           }
         }}
-        title="Delete player?"
-        description={`This will remove ${deletingPlayer?.name ?? 'this player'} from all teams.`}
+        title="Excluir jogador?"
+        description={`Isso removerá ${deletingPlayer?.name ?? 'este jogador'} de todos os times.`}
         onConfirm={() => {
           if (!deletingPlayer) {
             return
           }
           deletePlayer(deletingPlayer.id)
-          toast.success('Player deleted')
+          toast.success('Jogador excluído')
         }}
       />
     </section>

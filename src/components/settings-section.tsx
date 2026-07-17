@@ -13,9 +13,9 @@ export function SettingsSection() {
   return (
     <section className="space-y-3">
       <div>
-        <h2 className="font-heading font-semibold text-base">Settings</h2>
+        <h2 className="font-heading font-semibold text-base">Configurações</h2>
         <p className="text-muted-foreground text-xs">
-          Tune how draws balance your teams
+          Ajuste como o sorteio equilibra os times
         </p>
       </div>
 
@@ -28,10 +28,11 @@ export function SettingsSection() {
             <div className="flex items-center justify-between gap-3">
               <div className="space-y-0.5">
                 <Label htmlFor="balance-by-gender" className="text-sm">
-                  Balance by gender
+                  Equilibrar por gênero
                 </Label>
                 <p className="text-muted-foreground text-xs">
-                  Prefer a more even male/female split across teams.
+                  Prefira uma divisão mais equilibrada de masculino/feminino
+                  entre os times.
                 </p>
               </div>
               <Switch

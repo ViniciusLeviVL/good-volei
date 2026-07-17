@@ -4,8 +4,8 @@ export const teamFormSchema = z.object({
   name: z
     .string()
     .trim()
-    .min(1, 'Team name is required.')
-    .max(40, 'Team name must be 40 characters or less.'),
+    .min(1, 'O nome do time é obrigatório.')
+    .max(40, 'O nome do time deve ter no máximo 40 caracteres.'),
 })
 
 export type ITeamFormSchema = z.infer<typeof teamFormSchema>

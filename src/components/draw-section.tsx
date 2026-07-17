@@ -20,7 +20,7 @@ export function DrawSection() {
 
   function handleDraw(): void {
     if (!eligibility.canDraw) {
-      toast.error(eligibility.reason ?? 'Unable to draw teams.')
+      toast.error(eligibility.reason ?? 'Não foi possível sortear os times.')
       return
     }
 
@@ -35,7 +35,7 @@ export function DrawSection() {
           return
         }
 
-        toast.success('Teams drawn')
+        toast.success('Times sorteados')
       }, 280)
     })
   }
@@ -53,7 +53,7 @@ export function DrawSection() {
         ) : (
           <DicesIcon data-icon="inline-start" />
         )}
-        {isBusy ? 'Drawing…' : 'Draw teams'}
+        {isBusy ? 'Sorteando…' : 'Sortear times'}
       </Button>
       {!eligibility.canDraw ? (
         <p className="text-center text-muted-foreground text-xs">
@@ -61,7 +61,7 @@ export function DrawSection() {
         </p>
       ) : (
         <p className="text-center text-muted-foreground text-xs">
-          Locked players stay put. Everyone else is redistributed.
+          Jogadores bloqueados permanecem no time. Os demais são redistribuídos.
         </p>
       )}
     </section>

@@ -1,5 +1,5 @@
 export type { IPlayer, PlayerGender } from './player'
-export { PLAYER_GENDERS } from './player'
+export { PLAYER_GENDER_LABELS, PLAYER_GENDERS } from './player'
 export type { IAppSettings } from './settings'
 export { DEFAULT_APP_SETTINGS } from './settings'
 export type { ITeam } from './team'

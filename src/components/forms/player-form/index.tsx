@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
-import type { PlayerGender } from '@/types'
+import { PLAYER_GENDER_LABELS, type PlayerGender } from '@/types'
 
 import { type IPlayerFormSchema, playerFormSchema } from './schema'
 
@@ -22,8 +22,8 @@ interface IPlayerFormProps {
 }
 
 const GENDER_OPTIONS: { value: PlayerGender; label: string }[] = [
-  { value: 'male', label: 'Male' },
-  { value: 'female', label: 'Female' },
+  { value: 'male', label: PLAYER_GENDER_LABELS.male },
+  { value: 'female', label: PLAYER_GENDER_LABELS.female },
 ]
 
 export function PlayerForm({
@@ -70,7 +70,7 @@ export function PlayerForm({
     if (isDuplicate) {
       setError('name', {
         type: 'manual',
-        message: 'A player with this name already exists.',
+        message: 'Já existe um jogador com este nome.',
       })
       return
     }
@@ -84,10 +84,10 @@ export function PlayerForm({
       onSubmit={handleSubmit(handleFormSubmit)}
     >
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="player-name">Name</Label>
+        <Label htmlFor="player-name">Nome</Label>
         <Input
           id="player-name"
-          placeholder="Player name"
+          placeholder="Nome do jogador"
           aria-invalid={Boolean(errors.name)}
           {...register('name')}
         />
@@ -97,7 +97,7 @@ export function PlayerForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label>Skill</Label>
+        <Label>Habilidade</Label>
         <SkillRatingInput
           value={skill}
           onChange={(value) =>
@@ -110,7 +110,7 @@ export function PlayerForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label>Gender</Label>
+        <Label>Gênero</Label>
         <div className="grid grid-cols-2 gap-2">
           {GENDER_OPTIONS.map((option) => (
             <button
@@ -138,7 +138,7 @@ export function PlayerForm({
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         {onCancel ? (
           <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
+            Cancelar
           </Button>
         ) : null}
         <Button type="submit" disabled={isSubmitting}>

@@ -64,7 +64,7 @@ export const useTeamDrawStore = create<ITeamDrawStore>()(
       addPlayer: (input) => {
         const { players } = get()
         if (isPlayerNameTaken(input.name, players)) {
-          throw new Error('A player with this name already exists.')
+          throw new Error('Já existe um jogador com este nome.')
         }
 
         const player: IPlayer = {
@@ -79,7 +79,7 @@ export const useTeamDrawStore = create<ITeamDrawStore>()(
       updatePlayer: (input) => {
         const { players } = get()
         if (isPlayerNameTaken(input.name, players, input.id)) {
-          throw new Error('A player with this name already exists.')
+          throw new Error('Já existe um jogador com este nome.')
         }
 
         set({
@@ -172,7 +172,7 @@ export const useTeamDrawStore = create<ITeamDrawStore>()(
         if (!eligibility.canDraw) {
           return {
             success: false,
-            error: eligibility.reason ?? 'Unable to draw teams.',
+            error: eligibility.reason ?? 'Não foi possível sortear os times.',
           }
         }
 
@@ -186,7 +186,9 @@ export const useTeamDrawStore = create<ITeamDrawStore>()(
           return { success: true }
         } catch (error) {
           const message =
-            error instanceof Error ? error.message : 'Unable to draw teams.'
+            error instanceof Error
+              ? error.message
+              : 'Não foi possível sortear os times.'
           return { success: false, error: message }
         }
       },

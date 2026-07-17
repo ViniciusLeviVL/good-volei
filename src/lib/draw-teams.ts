@@ -30,12 +30,12 @@ export function drawTeams(input: IDrawTeamsInput): IDrawTeamsResult {
 
   if (teams.length < MIN_TEAMS_FOR_DRAW) {
     throw new Error(
-      `At least ${MIN_TEAMS_FOR_DRAW} teams are required to draw.`,
+      `É necessário ter pelo menos ${MIN_TEAMS_FOR_DRAW} times para sortear.`,
     )
   }
 
   if (players.length === 0) {
-    throw new Error('Add at least one player before drawing.')
+    throw new Error('Adicione pelo menos um jogador antes de sortear.')
   }
 
   const playerMap = new Map(players.map((player) => [player.id, player]))
@@ -233,14 +233,14 @@ export function canDrawTeams(
   if (teamCount < MIN_TEAMS_FOR_DRAW) {
     return {
       canDraw: false,
-      reason: `Create at least ${MIN_TEAMS_FOR_DRAW} teams before drawing.`,
+      reason: `Crie pelo menos ${MIN_TEAMS_FOR_DRAW} times antes de sortear.`,
     }
   }
 
   if (playerCount === 0) {
     return {
       canDraw: false,
-      reason: 'Add at least one player before drawing.',
+      reason: 'Adicione pelo menos um jogador antes de sortear.',
     }
   }
 
