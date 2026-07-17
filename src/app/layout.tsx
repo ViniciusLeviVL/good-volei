@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 
 import { Toaster } from '@/components/ui/sonner'
@@ -19,6 +19,19 @@ export const metadata: Metadata = {
   title: 'Good Vôlei | Sorteio de Times',
   description:
     'Cadastre jogadores e times e sorteie equipes de vôlei equilibradas, tudo localmente.',
+  applicationName: 'Good Vôlei',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Good Vôlei',
+  },
+  formatDetection: {
+    telephone: false,
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#1f8a72',
 }
 
 export default function RootLayout({

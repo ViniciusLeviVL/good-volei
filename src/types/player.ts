@@ -12,4 +12,6 @@ export interface IPlayer {
   readonly name: string
   readonly skill: number
   readonly gender: PlayerGender
+  /** When false, the player stays in the roster but is excluded from draws. */
+  readonly isEnabled: boolean
 }

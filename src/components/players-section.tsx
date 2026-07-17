@@ -19,6 +19,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import { cn } from '@/lib/utils'
 import { useTeamDrawStore } from '@/store/team-draw-store'
 import { type IPlayer, PLAYER_GENDER_LABELS } from '@/types'
 
@@ -27,12 +30,17 @@ export function PlayersSection() {
   const addPlayer = useTeamDrawStore((state) => state.addPlayer)
   const updatePlayer = useTeamDrawStore((state) => state.updatePlayer)
   const deletePlayer = useTeamDrawStore((state) => state.deletePlayer)
+  const togglePlayerEnabled = useTeamDrawStore(
+    (state) => state.togglePlayerEnabled,
+  )
 
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editingPlayer, setEditingPlayer] = useState<IPlayer | null>(null)
   const [deletingPlayer, setDeletingPlayer] = useState<IPlayer | null>(null)
 
   const existingNames = players.map((player) => player.name)
+  const enabledCount = players.filter((player) => player.isEnabled).length
+  const disabledCount = players.length - enabledCount
 
   function handleCreate(values: IPlayerFormSchema): void {
     try {
@@ -66,14 +74,29 @@ export function PlayersSection() {
     }
   }
 
+  function handleToggleEnabled(player: IPlayer): void {
+    togglePlayerEnabled(player.id)
+  }
+
+  function getRosterSummary(): string {
+    if (players.length === 0) {
+      return '0 cadastrados'
+    }
+
+    const totalLabel = `${players.length} cadastrado${players.length === 1 ? '' : 's'}`
+    if (disabledCount === 0) {
+      return totalLabel
+    }
+
+    return `${totalLabel} · ${enabledCount} ativo${enabledCount === 1 ? '' : 's'}`
+  }
+
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="font-heading font-semibold text-base">Jogadores</h2>
-          <p className="text-muted-foreground text-xs">
-            {players.length} cadastrado{players.length === 1 ? '' : 's'}
-          </p>
+          <p className="text-muted-foreground text-xs">{getRosterSummary()}</p>
         </div>
         <Button size="sm" onClick={() => setIsCreateOpen(true)}>
           <PlusIcon data-icon="inline-start" />
@@ -96,19 +119,46 @@ export function PlayersSection() {
         <ul className="space-y-2">
           {players.map((player, index) => (
             <BlurFade key={player.id} delay={0.02 * index} inView>
-              <li className="flex items-center gap-3 rounded-xl bg-card px-3 py-2.5 ring-1 ring-foreground/10">
+              <li
+                className={cn(
+                  'flex items-center gap-3 rounded-xl bg-card px-3 py-2.5 ring-1 ring-foreground/10 transition-opacity',
+                  !player.isEnabled && 'opacity-50',
+                )}
+              >
                 <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <p className="truncate font-medium text-sm">
                       {player.name}
                     </p>
                     <Badge variant="secondary">
                       {PLAYER_GENDER_LABELS[player.gender]}
                     </Badge>
+                    {!player.isEnabled ? (
+                      <Badge variant="outline">Desativado</Badge>
+                    ) : null}
                   </div>
                   <SkillStarsDisplay value={player.skill} />
                 </div>
                 <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-2 pr-1">
+                    <Label
+                      htmlFor={`player-enabled-${player.id}`}
+                      className="sr-only"
+                    >
+                      Ativo
+                    </Label>
+                    <Switch
+                      id={`player-enabled-${player.id}`}
+                      size="sm"
+                      checked={player.isEnabled}
+                      aria-label={
+                        player.isEnabled
+                          ? `Desativar ${player.name}`
+                          : `Ativar ${player.name}`
+                      }
+                      onCheckedChange={() => handleToggleEnabled(player)}
+                    />
+                  </div>
                   <Button
                     size="icon-sm"
                     variant="ghost"

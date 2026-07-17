@@ -1,4 +1,5 @@
 import { MIN_TEAMS_FOR_DRAW, SKILL_SIMILARITY_THRESHOLD } from '@/lib/constants'
+import { getEnabledPlayers } from '@/lib/team-stats'
 import type { IPlayer, ITeam, PlayerGender } from '@/types'
 
 export interface IDrawTeamsInput {
@@ -22,11 +23,13 @@ interface IMutableTeamState {
 }
 
 /**
- * Distributes unlocked players across teams while keeping locked players fixed.
+ * Distributes unlocked enabled players across teams while keeping locked players fixed.
+ * Disabled players are ignored entirely (including locked ones left on teams).
  * Balances skill totals, optionally gender, and randomizes similar-rated players.
  */
 export function drawTeams(input: IDrawTeamsInput): IDrawTeamsResult {
   const { players, teams, balanceByGender } = input
+  const enabledPlayers = getEnabledPlayers(players)
 
   if (teams.length < MIN_TEAMS_FOR_DRAW) {
     throw new Error(
@@ -34,14 +37,14 @@ export function drawTeams(input: IDrawTeamsInput): IDrawTeamsResult {
     )
   }
 
-  if (players.length === 0) {
-    throw new Error('Adicione pelo menos um jogador antes de sortear.')
+  if (enabledPlayers.length === 0) {
+    throw new Error('Ative ou adicione pelo menos um jogador antes de sortear.')
   }
 
-  const playerMap = new Map(players.map((player) => [player.id, player]))
+  const playerMap = new Map(enabledPlayers.map((player) => [player.id, player]))
   const teamStates = createInitialTeamStates(teams, playerMap)
-  const lockedPlayerIds = collectLockedPlayerIds(teams)
-  const unlockedPlayers = players.filter(
+  const lockedPlayerIds = collectLockedPlayerIds(teamStates)
+  const unlockedPlayers = enabledPlayers.filter(
     (player) => !lockedPlayerIds.has(player.id),
   )
   const orderedPlayers = orderPlayersForAssignment(unlockedPlayers)
@@ -90,7 +93,9 @@ function createInitialTeamStates(
   })
 }
 
-function collectLockedPlayerIds(teams: readonly ITeam[]): Set<string> {
+function collectLockedPlayerIds(
+  teams: readonly Pick<ITeam, 'lockedPlayerIds'>[],
+): Set<string> {
   return new Set(teams.flatMap((team) => team.lockedPlayerIds))
 }
 
@@ -240,7 +245,7 @@ export function canDrawTeams(
   if (playerCount === 0) {
     return {
       canDraw: false,
-      reason: 'Adicione pelo menos um jogador antes de sortear.',
+      reason: 'Ative ou adicione pelo menos um jogador antes de sortear.',
     }
   }
 

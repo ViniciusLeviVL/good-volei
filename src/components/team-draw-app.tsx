@@ -3,6 +3,7 @@
 import { AppHeader } from '@/components/app-header'
 import { DrawSection } from '@/components/draw-section'
 import { PlayersSection } from '@/components/players-section'
+import { PwaInstallButton } from '@/components/pwa-install-button'
 import { SettingsSection } from '@/components/settings-section'
 import { TeamsSection } from '@/components/teams-section'
 import { useHasHydrated } from '@/hooks/use-has-hydrated'
@@ -38,6 +39,7 @@ export function TeamDrawApp() {
         <TeamsSection />
         <PlayersSection />
         <SettingsSection />
+        <PwaInstallButton />
       </main>
     </div>
   )

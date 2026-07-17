@@ -15,6 +15,25 @@ export function createPlayerMap(
   return new Map(players.map((player) => [player.id, player]))
 }
 
+/**
+ * Returns players marked as available for the current match draw.
+ * Players without `isEnabled` (legacy persisted data) are treated as enabled.
+ */
+export function getEnabledPlayers(players: readonly IPlayer[]): IPlayer[] {
+  return players.filter((player) => player.isEnabled !== false)
+}
+
+export function removePlayerFromTeams(
+  teams: readonly ITeam[],
+  playerId: string,
+): ITeam[] {
+  return teams.map((team) => ({
+    ...team,
+    playerIds: team.playerIds.filter((id) => id !== playerId),
+    lockedPlayerIds: team.lockedPlayerIds.filter((id) => id !== playerId),
+  }))
+}
+
 export function getTeamPlayers(
   team: ITeam,
   playerMap: ReadonlyMap<string, IPlayer>,
@@ -55,7 +74,9 @@ export function getUnassignedPlayers(
 ): IPlayer[] {
   const assignedIds = new Set(teams.flatMap((team) => team.playerIds))
 
-  return players.filter((player) => !assignedIds.has(player.id))
+  return getEnabledPlayers(players).filter(
+    (player) => !assignedIds.has(player.id),
+  )
 }
 
 export function isPlayerNameTaken(

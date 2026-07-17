@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { canDrawTeams } from '@/lib/draw-teams'
+import { getEnabledPlayers } from '@/lib/team-stats'
 import { useTeamDrawStore } from '@/store/team-draw-store'
 
 export function DrawSection() {
@@ -15,7 +16,8 @@ export function DrawSection() {
   const [isPending, startTransition] = useTransition()
   const [isDrawing, setIsDrawing] = useState(false)
 
-  const eligibility = canDrawTeams(players.length, teams.length)
+  const enabledPlayerCount = getEnabledPlayers(players).length
+  const eligibility = canDrawTeams(enabledPlayerCount, teams.length)
   const isBusy = isPending || isDrawing
 
   function handleDraw(): void {
@@ -61,7 +63,8 @@ export function DrawSection() {
         </p>
       ) : (
         <p className="text-center text-muted-foreground text-xs">
-          Jogadores bloqueados permanecem no time. Os demais são redistribuídos.
+          Jogadores desativados ficam de fora. Bloqueados permanecem no time; os
+          demais são redistribuídos.
         </p>
       )}
     </section>

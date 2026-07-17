@@ -5,7 +5,11 @@ import { persist } from 'zustand/middleware'
 
 import { STORAGE_KEY } from '@/lib/constants'
 import { canDrawTeams, drawTeams } from '@/lib/draw-teams'
-import { isPlayerNameTaken } from '@/lib/team-stats'
+import {
+  getEnabledPlayers,
+  isPlayerNameTaken,
+  removePlayerFromTeams,
+} from '@/lib/team-stats'
 import {
   DEFAULT_APP_SETTINGS,
   type IAppSettings,
@@ -37,6 +41,7 @@ export interface ITeamDrawStore {
   readonly addPlayer: (input: ICreatePlayerInput) => void
   readonly updatePlayer: (input: IUpdatePlayerInput) => void
   readonly deletePlayer: (playerId: string) => void
+  readonly togglePlayerEnabled: (playerId: string) => void
   readonly addTeam: (input: ICreateTeamInput) => void
   readonly renameTeam: (teamId: string, name: string) => void
   readonly deleteTeam: (teamId: string) => void
@@ -47,8 +52,47 @@ export interface ITeamDrawStore {
     | { success: false; error: string }
 }
 
+interface IPersistedTeamDrawState {
+  readonly players?: Array<Partial<IPlayer> & Pick<IPlayer, 'id' | 'name'>>
+  readonly teams?: ITeam[]
+  readonly settings?: IAppSettings
+}
+
 function createId(): string {
   return crypto.randomUUID()
+}
+
+/**
+ * Ensures persisted players have `isEnabled` and strips disabled players from teams.
+ */
+function normalizePersistedState(
+  state: IPersistedTeamDrawState,
+): Pick<ITeamDrawStore, 'players' | 'teams' | 'settings'> {
+  const players: IPlayer[] = (state.players ?? []).map((player) => ({
+    id: player.id,
+    name: player.name,
+    skill: typeof player.skill === 'number' ? player.skill : 0,
+    gender: player.gender === 'female' ? 'female' : 'male',
+    isEnabled: player.isEnabled !== false,
+  }))
+  const disabledPlayerIds = new Set(
+    players.filter((player) => !player.isEnabled).map((player) => player.id),
+  )
+  const teams = (state.teams ?? []).map((team) => ({
+    ...team,
+    playerIds: (team.playerIds ?? []).filter(
+      (id) => !disabledPlayerIds.has(id),
+    ),
+    lockedPlayerIds: (team.lockedPlayerIds ?? []).filter(
+      (id) => !disabledPlayerIds.has(id),
+    ),
+  }))
+
+  return {
+    players,
+    teams,
+    settings: state.settings ?? DEFAULT_APP_SETTINGS,
+  }
 }
 
 export const useTeamDrawStore = create<ITeamDrawStore>()(
@@ -72,6 +116,7 @@ export const useTeamDrawStore = create<ITeamDrawStore>()(
           name: input.name.trim(),
           skill: input.skill,
           gender: input.gender,
+          isEnabled: true,
         }
 
         set({ players: [...players, player] })
@@ -99,13 +144,28 @@ export const useTeamDrawStore = create<ITeamDrawStore>()(
         const { players, teams } = get()
         set({
           players: players.filter((player) => player.id !== playerId),
-          teams: teams.map((team) => ({
-            ...team,
-            playerIds: team.playerIds.filter((id) => id !== playerId),
-            lockedPlayerIds: team.lockedPlayerIds.filter(
-              (id) => id !== playerId,
-            ),
-          })),
+          teams: removePlayerFromTeams(teams, playerId),
+        })
+      },
+      togglePlayerEnabled: (playerId) => {
+        const { players, teams } = get()
+        const targetPlayer = players.find((player) => player.id === playerId)
+        if (!targetPlayer) {
+          return
+        }
+
+        const nextIsEnabled = !targetPlayer.isEnabled
+        const nextPlayers = players.map((player) =>
+          player.id === playerId
+            ? { ...player, isEnabled: nextIsEnabled }
+            : player,
+        )
+
+        // Disabling unlocks and removes the player from all current team assignments
+        // so inactive players do not appear as if they were playing.
+        set({
+          players: nextPlayers,
+          teams: nextIsEnabled ? teams : removePlayerFromTeams(teams, playerId),
         })
       },
       addTeam: (input) => {
@@ -130,6 +190,11 @@ export const useTeamDrawStore = create<ITeamDrawStore>()(
         })
       },
       togglePlayerLock: (teamId, playerId) => {
+        const player = get().players.find((item) => item.id === playerId)
+        if (player && !player.isEnabled) {
+          return
+        }
+
         set({
           teams: get().teams.map((team) => {
             if (team.id !== teamId) {
@@ -167,7 +232,8 @@ export const useTeamDrawStore = create<ITeamDrawStore>()(
       },
       executeDraw: () => {
         const { players, teams, settings } = get()
-        const eligibility = canDrawTeams(players.length, teams.length)
+        const enabledPlayers = getEnabledPlayers(players)
+        const eligibility = canDrawTeams(enabledPlayers.length, teams.length)
 
         if (!eligibility.canDraw) {
           return {
@@ -195,17 +261,42 @@ export const useTeamDrawStore = create<ITeamDrawStore>()(
     }),
     {
       name: STORAGE_KEY,
+      version: 1,
+      migrate: (persistedState) => {
+        if (!persistedState || typeof persistedState !== 'object') {
+          return {
+            players: [],
+            teams: [],
+            settings: DEFAULT_APP_SETTINGS,
+          }
+        }
+
+        return normalizePersistedState(
+          persistedState as IPersistedTeamDrawState,
+        )
+      },
+      merge: (persistedState, currentState) => {
+        if (!persistedState || typeof persistedState !== 'object') {
+          return currentState
+        }
+
+        return {
+          ...currentState,
+          ...normalizePersistedState(persistedState as IPersistedTeamDrawState),
+        }
+      },
       partialize: (state) => ({
         players: state.players,
         teams: state.teams,
         settings: state.settings,
       }),
-      onRehydrateStorage: () => (state) => {
-        if (state) {
+      // Close over store actions — do NOT call `useTeamDrawStore` here.
+      // localStorage rehydration is sync and runs during `create()`, before
+      // the const binding exists (TDZ), which left hasHydrated stuck at false.
+      onRehydrateStorage: (state) => {
+        return (_rehydratedState, _error) => {
           state.setHasHydrated(true)
-          return
         }
-        useTeamDrawStore.setState({ hasHydrated: true })
       },
     },
   ),

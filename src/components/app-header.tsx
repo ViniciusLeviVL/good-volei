@@ -19,7 +19,7 @@ export function AppHeader() {
             Good Vôlei
           </p>
           <p className="text-muted-foreground text-xs">
-            Balanced team draws for your next match
+            Sorteios equilibrados para o próximo jogo
           </p>
         </div>
       </div>
