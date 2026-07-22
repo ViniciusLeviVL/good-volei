@@ -86,8 +86,100 @@ export function formatWhatsAppDrawText(
   return lines.join('\n')
 }
 
-export async function copyTextToClipboard(text: string): Promise<void> {
+export type ShareOutcome = 'shared' | 'copied' | 'downloaded' | 'cancelled'
+
+const SHARE_TITLE = 'Good Vôlei — Resultado do sorteio'
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError'
+}
+
+function createShareImageFile(blob: Blob): File {
+  const stamp = new Date().toISOString().slice(0, 10)
+  return new File([blob], `good-volei-sorteio-${stamp}.png`, {
+    type: 'image/png',
+  })
+}
+
+export function canUseWebShare(): boolean {
+  return (
+    typeof navigator !== 'undefined' && typeof navigator.share === 'function'
+  )
+}
+
+export function canShareFiles(files: readonly File[]): boolean {
+  if (!canUseWebShare() || typeof navigator.canShare !== 'function') {
+    return false
+  }
+
+  return navigator.canShare({ files: [...files] })
+}
+
+export function canShareDrawImage(blob: Blob): boolean {
+  return canShareFiles([createShareImageFile(blob)])
+}
+
+/**
+ * Shares WhatsApp-friendly text via the Web Share API.
+ */
+export async function shareDrawText(text: string): Promise<ShareOutcome> {
+  if (!canUseWebShare()) {
+    throw new Error('Compartilhamento não disponível neste navegador.')
+  }
+
+  try {
+    await navigator.share({
+      title: SHARE_TITLE,
+      text,
+    })
+    return 'shared'
+  } catch (error) {
+    if (isAbortError(error)) {
+      return 'cancelled'
+    }
+    throw error
+  }
+}
+
+/**
+ * Shares the results image via the Web Share API.
+ */
+export async function shareDrawImage(blob: Blob): Promise<ShareOutcome> {
+  const file = createShareImageFile(blob)
+
+  if (!canShareFiles([file])) {
+    throw new Error(
+      'Compartilhamento de imagem não disponível neste navegador.',
+    )
+  }
+
+  try {
+    await navigator.share({
+      title: SHARE_TITLE,
+      files: [file],
+    })
+    return 'shared'
+  } catch (error) {
+    if (isAbortError(error)) {
+      return 'cancelled'
+    }
+    throw error
+  }
+}
+
+/**
+ * Copies WhatsApp-friendly text to the clipboard.
+ */
+export async function copyDrawText(text: string): Promise<ShareOutcome> {
   await navigator.clipboard.writeText(text)
+  return 'copied'
+}
+
+/**
+ * Copies the results image to the clipboard, or downloads it as fallback.
+ */
+export async function copyDrawImage(blob: Blob): Promise<ShareOutcome> {
+  return copyOrDownloadDrawImage(blob)
 }
 
 function truncateCanvasText(
@@ -269,7 +361,7 @@ function downloadImageBlob(blob: Blob): void {
 /**
  * Copies the PNG to the clipboard when supported; otherwise downloads the file.
  */
-export async function copyOrDownloadDrawImage(
+async function copyOrDownloadDrawImage(
   blob: Blob,
 ): Promise<'copied' | 'downloaded'> {
   const canWriteImage =
