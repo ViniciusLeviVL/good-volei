@@ -9,6 +9,7 @@ export interface IShareTeamResult {
   readonly name: string
   readonly playerNames: readonly string[]
   readonly playerCount: number
+  readonly skillAverage: number
   readonly maleCount: number
   readonly femaleCount: number
 }
@@ -17,10 +18,10 @@ const IMAGE_WIDTH = 720
 const IMAGE_PADDING = 36
 const TEAM_GAP = 20
 const HEADER_HEIGHT = 92
-const FOOTER_HEIGHT = 48
 const TEAM_HEADER_HEIGHT = 56
-const PLAYER_ROW_HEIGHT = 34
-const TEAM_PADDING_Y = 16
+const PLAYER_ROW_HEIGHT = 30
+const PLAYER_LIST_TOP = 12
+const PLAYER_LIST_BOTTOM = 12
 
 const COLORS = {
   background: '#f5fbf8',
@@ -50,6 +51,7 @@ export function buildShareTeamResults(
       name: team.name,
       playerNames: teamPlayers.map((player) => player.name),
       playerCount: stats.playerCount,
+      skillAverage: stats.skillAverage,
       maleCount: stats.maleCount,
       femaleCount: stats.femaleCount,
     }
@@ -223,18 +225,18 @@ function roundRect(
 }
 
 function calculateImageHeight(teams: readonly IShareTeamResult[]): number {
-  const teamsHeight = teams.reduce((total, team) => {
+  const teamsHeight = teams.reduce((total, team, index) => {
     const playerRows = Math.max(team.playerNames.length, 1)
-    return (
-      total +
+    const cardHeight =
       TEAM_HEADER_HEIGHT +
-      TEAM_PADDING_Y * 2 +
+      PLAYER_LIST_TOP +
       playerRows * PLAYER_ROW_HEIGHT +
-      TEAM_GAP
-    )
+      PLAYER_LIST_BOTTOM
+    const gapAfter = index < teams.length - 1 ? TEAM_GAP : 0
+    return total + cardHeight + gapAfter
   }, 0)
 
-  return HEADER_HEIGHT + teamsHeight + FOOTER_HEIGHT + IMAGE_PADDING
+  return HEADER_HEIGHT + teamsHeight + IMAGE_PADDING
 }
 
 /**
@@ -270,10 +272,13 @@ export async function createDrawResultsImageBlob(
   let currentY = HEADER_HEIGHT
   const cardWidth = IMAGE_WIDTH - IMAGE_PADDING * 2
 
-  for (const team of teams) {
+  for (const [index, team] of teams.entries()) {
     const playerRows = Math.max(team.playerNames.length, 1)
     const cardHeight =
-      TEAM_HEADER_HEIGHT + TEAM_PADDING_Y * 2 + playerRows * PLAYER_ROW_HEIGHT
+      TEAM_HEADER_HEIGHT +
+      PLAYER_LIST_TOP +
+      playerRows * PLAYER_ROW_HEIGHT +
+      PLAYER_LIST_BOTTOM
 
     context.save()
     roundRect(context, IMAGE_PADDING, currentY, cardWidth, cardHeight, 18)
@@ -301,12 +306,19 @@ export async function createDrawResultsImageBlob(
       currentY + 28,
     )
 
-    const meta = `${team.playerCount} ${team.playerCount === 1 ? 'jogador' : 'jogadores'} · ${team.maleCount}M / ${team.femaleCount}F`
+    const playerLabel =
+      team.playerCount === 1 ? '1 jogador' : `${team.playerCount} jogadores`
+    const meta = `${playerLabel} · Média ${team.skillAverage.toFixed(1)} · ${team.maleCount}M / ${team.femaleCount}F`
     context.fillStyle = COLORS.muted
     context.font = '500 13px system-ui, sans-serif'
-    context.fillText(meta, IMAGE_PADDING + 20, currentY + 48)
+    context.fillText(
+      truncateCanvasText(context, meta, textMaxWidth),
+      IMAGE_PADDING + 20,
+      currentY + 48,
+    )
 
-    let playerY = currentY + TEAM_HEADER_HEIGHT + TEAM_PADDING_Y + 8
+    let playerY =
+      currentY + TEAM_HEADER_HEIGHT + PLAYER_LIST_TOP + PLAYER_ROW_HEIGHT - 8
 
     if (team.playerNames.length === 0) {
       context.fillStyle = COLORS.muted
@@ -330,12 +342,11 @@ export async function createDrawResultsImageBlob(
       }
     }
 
-    currentY += cardHeight + TEAM_GAP
+    currentY += cardHeight
+    if (index < teams.length - 1) {
+      currentY += TEAM_GAP
+    }
   }
-
-  context.fillStyle = COLORS.muted
-  context.font = '500 13px system-ui, sans-serif'
-  context.fillText('Sorteado com Good Vôlei', IMAGE_PADDING, height - 20)
 
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
