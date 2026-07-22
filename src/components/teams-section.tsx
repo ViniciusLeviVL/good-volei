@@ -15,6 +15,7 @@ import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { EmptyState } from '@/components/empty-state'
 import { TeamForm } from '@/components/forms/team-form'
 import type { ITeamFormSchema } from '@/components/forms/team-form/schema'
+import { ShareResultsButton } from '@/components/share-results-dialog'
 import { SkillStarsDisplay } from '@/components/skill-rating-input'
 import { Badge } from '@/components/ui/badge'
 import { BlurFade } from '@/components/ui/blur-fade'
@@ -73,10 +74,13 @@ export function TeamsSection() {
             jogadores após o sorteio
           </p>
         </div>
-        <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-          <PlusIcon data-icon="inline-start" />
-          Adicionar
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          <ShareResultsButton />
+          <Button size="sm" onClick={() => setIsCreateOpen(true)}>
+            <PlusIcon data-icon="inline-start" />
+            Adicionar
+          </Button>
+        </div>
       </div>
 
       {teams.length === 0 ? (
