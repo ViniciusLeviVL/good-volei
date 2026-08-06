@@ -39,7 +39,6 @@ export function DrawSection() {
         }
 
         fireBottomConfetti()
-        toast.success('Times sorteados')
       }, 280)
     })
   }
