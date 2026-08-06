@@ -38,6 +38,9 @@ export function PlayersSection() {
   const [editingPlayer, setEditingPlayer] = useState<IPlayer | null>(null)
   const [deletingPlayer, setDeletingPlayer] = useState<IPlayer | null>(null)
 
+  const sortedPlayers = [...players].sort((left, right) =>
+    left.name.localeCompare(right.name, 'pt-BR', { sensitivity: 'base' }),
+  )
   const existingNames = players.map((player) => player.name)
   const enabledCount = players.filter((player) => player.isEnabled).length
   const disabledCount = players.length - enabledCount
@@ -117,7 +120,7 @@ export function PlayersSection() {
         />
       ) : (
         <ul className="space-y-2">
-          {players.map((player, index) => (
+          {sortedPlayers.map((player, index) => (
             <BlurFade key={player.id} delay={0.02 * index} inView>
               <li
                 className={cn(
