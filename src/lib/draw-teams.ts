@@ -25,7 +25,8 @@ export interface IDrawTeamsResult {
 /**
  * Distributes unlocked enabled players across teams while keeping locked players fixed.
  * Disabled players are ignored entirely (including locked ones left on teams).
- * Balances skill totals, optionally gender, then swaps similar-rated players for variety.
+ * Fills smaller teams first so sizes stay even, then balances skill and optional gender.
+ * Similar-rated players may still swap afterwards for variety.
  */
 export function drawTeams(input: IDrawTeamsInput): IDrawTeamsResult {
   const { players, teams, balanceByGender, drawVarietySwap } = input
@@ -159,23 +160,34 @@ function shuffleArray<T>(items: readonly T[]): T[] {
   return result
 }
 
+/**
+ * Always fills a currently smallest team so sizes differ by at most one,
+ * unless locked players already force a larger gap.
+ */
 function selectBestTeamIndex(
   teams: readonly IMutableTeamState[],
   player: IPlayer,
   balanceByGender: boolean,
 ): number {
-  const scores = teams.map((team) =>
-    calculateAssignmentCost(team, player, teams, balanceByGender),
+  const candidateIndexes = getSmallestTeamIndexes(teams)
+  const scores = candidateIndexes.map((index) =>
+    calculateAssignmentCost(teams[index], player, teams, balanceByGender),
   )
   const bestScore = Math.min(...scores)
   const scoreEpsilon = 0.05
-  const candidateIndexes = scores
-    .map((score, index) => ({ score, index }))
-    .filter(({ score }) => score <= bestScore + scoreEpsilon)
-    .map(({ index }) => index)
+  const bestIndexes = candidateIndexes.filter(
+    (_, scoreIndex) => scores[scoreIndex] <= bestScore + scoreEpsilon,
+  )
+  const randomIndex = Math.floor(Math.random() * bestIndexes.length)
+  return bestIndexes[randomIndex]
+}
 
-  const randomIndex = Math.floor(Math.random() * candidateIndexes.length)
-  return candidateIndexes[randomIndex]
+function getSmallestTeamIndexes(teams: readonly IMutableTeamState[]): number[] {
+  const minCount = Math.min(...teams.map((team) => team.playerIds.length))
+  return teams
+    .map((team, index) => ({ count: team.playerIds.length, index }))
+    .filter(({ count }) => count === minCount)
+    .map(({ index }) => index)
 }
 
 function calculateAssignmentCost(
@@ -185,7 +197,6 @@ function calculateAssignmentCost(
   balanceByGender: boolean,
 ): number {
   const projectedSkill = team.skillTotal + player.skill
-  const projectedCount = team.playerIds.length + 1
   const otherSkillTotals = allTeams
     .filter((candidate) => candidate.id !== team.id)
     .map((candidate) => candidate.skillTotal)
@@ -193,19 +204,12 @@ function calculateAssignmentCost(
   const skillSpread =
     Math.max(...projectedSkills) - Math.min(...projectedSkills)
 
-  const otherCounts = allTeams
-    .filter((candidate) => candidate.id !== team.id)
-    .map((candidate) => candidate.playerIds.length)
-  const projectedCounts = [...otherCounts, projectedCount]
-  const countSpread =
-    Math.max(...projectedCounts) - Math.min(...projectedCounts)
-
   let genderCost = 0
   if (balanceByGender) {
     genderCost = calculateGenderCost(team, player.gender, allTeams)
   }
 
-  return skillSpread * 2 + countSpread * 0.75 + genderCost
+  return skillSpread * 2 + genderCost
 }
 
 function calculateGenderCost(
