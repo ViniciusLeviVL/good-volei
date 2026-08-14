@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  BroomIcon,
   LockIcon,
   LockOpenIcon,
   PencilIcon,
@@ -41,11 +42,13 @@ export function TeamsSection() {
   const addTeam = useTeamDrawStore((state) => state.addTeam)
   const renameTeam = useTeamDrawStore((state) => state.renameTeam)
   const deleteTeam = useTeamDrawStore((state) => state.deleteTeam)
+  const clearTeamPlayers = useTeamDrawStore((state) => state.clearTeamPlayers)
   const togglePlayerLock = useTeamDrawStore((state) => state.togglePlayerLock)
 
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editingTeam, setEditingTeam] = useState<ITeam | null>(null)
   const [deletingTeam, setDeletingTeam] = useState<ITeam | null>(null)
+  const [clearingTeam, setClearingTeam] = useState<ITeam | null>(null)
 
   const playerMap = useMemo(() => createPlayerMap(players), [players])
 
@@ -123,6 +126,19 @@ export function TeamsSection() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        aria-label={`Limpar jogadores de ${team.name}`}
+                        disabled={
+                          !team.playerIds.some(
+                            (id) => !team.lockedPlayerIds.includes(id),
+                          )
+                        }
+                        onClick={() => setClearingTeam(team)}
+                      >
+                        <BroomIcon />
+                      </Button>
                       <Button
                         size="icon-sm"
                         variant="ghost"
@@ -239,6 +255,25 @@ export function TeamsSection() {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDeleteDialog
+        open={Boolean(clearingTeam)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setClearingTeam(null)
+          }
+        }}
+        title="Limpar time?"
+        description={`Os jogadores desbloqueados de ${clearingTeam?.name ?? 'este time'} serão removidos. Os bloqueados permanecem no time.`}
+        confirmLabel="Limpar"
+        onConfirm={() => {
+          if (!clearingTeam) {
+            return
+          }
+          clearTeamPlayers(clearingTeam.id)
+          toast.success('Jogadores removidos do time')
+        }}
+      />
 
       <ConfirmDeleteDialog
         open={Boolean(deletingTeam)}

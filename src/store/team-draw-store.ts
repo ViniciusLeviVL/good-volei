@@ -53,6 +53,7 @@ export interface ITeamDrawStore {
   readonly addTeam: (input: ICreateTeamInput) => void
   readonly renameTeam: (teamId: string, name: string) => void
   readonly deleteTeam: (teamId: string) => void
+  readonly clearTeamPlayers: (teamId: string) => void
   readonly togglePlayerLock: (teamId: string, playerId: string) => void
   readonly updateSettings: (settings: IUpdateSettingsInput) => void
   readonly replacePlayersAndTeams: (input: {
@@ -220,6 +221,20 @@ export const useTeamDrawStore = create<ITeamDrawStore>()(
       deleteTeam: (teamId) => {
         set({
           teams: get().teams.filter((team) => team.id !== teamId),
+        })
+      },
+      clearTeamPlayers: (teamId) => {
+        set({
+          teams: get().teams.map((team) =>
+            team.id === teamId
+              ? {
+                  ...team,
+                  playerIds: team.playerIds.filter((id) =>
+                    team.lockedPlayerIds.includes(id),
+                  ),
+                }
+              : team,
+          ),
         })
       },
       togglePlayerLock: (teamId, playerId) => {
