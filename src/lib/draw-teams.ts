@@ -1,34 +1,34 @@
 import { MIN_TEAMS_FOR_DRAW, SKILL_SIMILARITY_THRESHOLD } from '@/lib/constants'
+import {
+  diversifyTeamsBySimilarSwaps,
+  type IMutableTeamState,
+} from '@/lib/diversify-teams'
 import { getEnabledPlayers } from '@/lib/team-stats'
-import type { IPlayer, ITeam, PlayerGender } from '@/types'
+import type {
+  IDrawVarietySwapConfig,
+  IPlayer,
+  ITeam,
+  PlayerGender,
+} from '@/types'
 
 export interface IDrawTeamsInput {
   readonly players: readonly IPlayer[]
   readonly teams: readonly ITeam[]
   readonly balanceByGender: boolean
+  readonly drawVarietySwap: IDrawVarietySwapConfig
 }
 
 export interface IDrawTeamsResult {
   readonly teams: ITeam[]
 }
 
-interface IMutableTeamState {
-  id: string
-  name: string
-  playerIds: string[]
-  lockedPlayerIds: string[]
-  skillTotal: number
-  maleCount: number
-  femaleCount: number
-}
-
 /**
  * Distributes unlocked enabled players across teams while keeping locked players fixed.
  * Disabled players are ignored entirely (including locked ones left on teams).
- * Balances skill totals, optionally gender, and randomizes similar-rated players.
+ * Balances skill totals, optionally gender, then swaps similar-rated players for variety.
  */
 export function drawTeams(input: IDrawTeamsInput): IDrawTeamsResult {
-  const { players, teams, balanceByGender } = input
+  const { players, teams, balanceByGender, drawVarietySwap } = input
   const enabledPlayers = getEnabledPlayers(players)
 
   if (teams.length < MIN_TEAMS_FOR_DRAW) {
@@ -53,6 +53,13 @@ export function drawTeams(input: IDrawTeamsInput): IDrawTeamsResult {
     const teamIndex = selectBestTeamIndex(teamStates, player, balanceByGender)
     assignPlayerToTeam(teamStates[teamIndex], player)
   }
+
+  diversifyTeamsBySimilarSwaps({
+    teamStates,
+    playerMap,
+    swapConfig: drawVarietySwap,
+    balanceByGender,
+  })
 
   return {
     teams: teamStates.map((team) => ({

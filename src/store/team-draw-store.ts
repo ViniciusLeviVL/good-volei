@@ -3,8 +3,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-import { STORAGE_KEY } from '@/lib/constants'
+import { DRAW_VARIETY_SWAP_PRESETS, STORAGE_KEY } from '@/lib/constants'
 import { canDrawTeams, drawTeams } from '@/lib/draw-teams'
+import { normalizeDrawVarietySwapConfig } from '@/lib/draw-variety'
 import {
   getEnabledPlayers,
   isPlayerNameTaken,
@@ -13,8 +14,10 @@ import {
 import {
   DEFAULT_APP_SETTINGS,
   type IAppSettings,
+  type IDrawVarietySwapConfig,
   type IPlayer,
   type ITeam,
+  isDrawVariety,
   type PlayerGender,
 } from '@/types'
 
@@ -32,6 +35,11 @@ export interface ICreateTeamInput {
   readonly name: string
 }
 
+export interface IUpdateSettingsInput {
+  readonly balanceByGender?: boolean
+  readonly drawVarietySwap?: Partial<IDrawVarietySwapConfig>
+}
+
 export interface ITeamDrawStore {
   readonly players: IPlayer[]
   readonly teams: ITeam[]
@@ -46,7 +54,7 @@ export interface ITeamDrawStore {
   readonly renameTeam: (teamId: string, name: string) => void
   readonly deleteTeam: (teamId: string) => void
   readonly togglePlayerLock: (teamId: string, playerId: string) => void
-  readonly updateSettings: (settings: Partial<IAppSettings>) => void
+  readonly updateSettings: (settings: IUpdateSettingsInput) => void
   readonly replacePlayersAndTeams: (input: {
     readonly players: IPlayer[]
     readonly teams: ITeam[]
@@ -56,14 +64,34 @@ export interface ITeamDrawStore {
     | { success: false; error: string }
 }
 
+interface IPersistedAppSettings {
+  readonly balanceByGender?: boolean
+  readonly drawVariety?: unknown
+  readonly drawVarietySwap?: Partial<IDrawVarietySwapConfig>
+}
+
 interface IPersistedTeamDrawState {
   readonly players?: Array<Partial<IPlayer> & Pick<IPlayer, 'id' | 'name'>>
   readonly teams?: ITeam[]
-  readonly settings?: IAppSettings
+  readonly settings?: IPersistedAppSettings
 }
 
 function createId(): string {
   return crypto.randomUUID()
+}
+
+function normalizeSettings(settings?: IPersistedAppSettings): IAppSettings {
+  const presetConfig = isDrawVariety(settings?.drawVariety)
+    ? DRAW_VARIETY_SWAP_PRESETS[settings.drawVariety]
+    : DEFAULT_APP_SETTINGS.drawVarietySwap
+
+  return {
+    balanceByGender: settings?.balanceByGender === true,
+    drawVarietySwap: normalizeDrawVarietySwapConfig({
+      ...presetConfig,
+      ...settings?.drawVarietySwap,
+    }),
+  }
 }
 
 /**
@@ -95,7 +123,7 @@ function normalizePersistedState(
   return {
     players,
     teams,
-    settings: state.settings ?? DEFAULT_APP_SETTINGS,
+    settings: normalizeSettings(state.settings),
   }
 }
 
@@ -226,12 +254,17 @@ export const useTeamDrawStore = create<ITeamDrawStore>()(
           }),
         })
       },
-      updateSettings: (settings) => {
+      updateSettings: (partial) => {
+        const current = get().settings
         set({
-          settings: {
-            ...get().settings,
-            ...settings,
-          },
+          settings: normalizeSettings({
+            ...current,
+            ...partial,
+            drawVarietySwap: {
+              ...current.drawVarietySwap,
+              ...partial.drawVarietySwap,
+            },
+          }),
         })
       },
       replacePlayersAndTeams: (input) => {
@@ -257,6 +290,7 @@ export const useTeamDrawStore = create<ITeamDrawStore>()(
             players,
             teams,
             balanceByGender: settings.balanceByGender,
+            drawVarietySwap: settings.drawVarietySwap,
           })
           set({ teams: result.teams })
           return { success: true }
@@ -271,7 +305,7 @@ export const useTeamDrawStore = create<ITeamDrawStore>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 1,
+      version: 3,
       migrate: (persistedState) => {
         if (!persistedState || typeof persistedState !== 'object') {
           return {

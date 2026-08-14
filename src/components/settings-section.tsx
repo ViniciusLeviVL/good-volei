@@ -1,12 +1,13 @@
 'use client'
 
-import { DownloadIcon, SettingsIcon, UploadIcon } from 'lucide-react'
+import { DownloadIcon, UploadIcon, VenusAndMarsIcon } from 'lucide-react'
 import { type ChangeEvent, useRef, useState } from 'react'
 import { toast } from 'sonner'
-
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
+import { DrawVarietySettings } from '@/components/draw-variety-settings'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import {
   buildExportPayload,
@@ -94,32 +95,34 @@ export function SettingsSection() {
         </p>
       </div>
 
-      <div className="space-y-2 rounded-xl bg-card p-3 ring-1 ring-foreground/10">
+      <div className="space-y-3 rounded-xl bg-card p-3 ring-1 ring-foreground/10">
         <div className="flex items-start gap-3">
           <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
-            <SettingsIcon className="size-4 text-muted-foreground" />
+            <VenusAndMarsIcon className="size-4 text-muted-foreground" />
           </div>
-          <div className="min-w-0 flex-1 space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="space-y-0.5">
-                <Label htmlFor="balance-by-gender" className="text-sm">
-                  Equilibrar por gênero
-                </Label>
-                <p className="text-muted-foreground text-xs">
-                  Prefira uma divisão mais equilibrada de masculino/feminino
-                  entre os times.
-                </p>
-              </div>
-              <Switch
-                id="balance-by-gender"
-                checked={settings.balanceByGender}
-                onCheckedChange={(checked) =>
-                  updateSettings({ balanceByGender: checked })
-                }
-              />
+          <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <Label htmlFor="balance-by-gender" className="text-sm">
+                Equilibrar por gênero
+              </Label>
+              <p className="text-muted-foreground text-xs">
+                Prefira uma divisão mais equilibrada de masculino/feminino entre
+                os times.
+              </p>
             </div>
+            <Switch
+              id="balance-by-gender"
+              checked={settings.balanceByGender}
+              onCheckedChange={(checked) =>
+                updateSettings({ balanceByGender: checked })
+              }
+            />
           </div>
         </div>
+
+        <Separator />
+
+        <DrawVarietySettings />
       </div>
 
       <div className="space-y-3 rounded-xl bg-card p-3 ring-1 ring-foreground/10">
