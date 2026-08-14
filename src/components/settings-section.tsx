@@ -33,7 +33,7 @@ export function SettingsSection() {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
 
   function handleExport(): void {
-    const payload = buildExportPayload(players, teams)
+    const payload = buildExportPayload(players, teams, settings)
     downloadTeamDrawJson(payload)
     toast.success('Dados exportados')
   }
@@ -129,7 +129,8 @@ export function SettingsSection() {
         <div className="space-y-0.5">
           <p className="font-medium text-sm">Dados</p>
           <p className="text-muted-foreground text-xs">
-            Exporte ou importe jogadores e times em um arquivo JSON.
+            Exporte ou importe jogadores, times e configurações em um arquivo
+            JSON.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-2">
@@ -165,7 +166,7 @@ export function SettingsSection() {
         open={isImportDialogOpen}
         onOpenChange={handleImportDialogOpenChange}
         title="Importar dados?"
-        description="Importar este arquivo substituirá todos os jogadores e times atuais. Esta ação não pode ser desfeita. Deseja continuar?"
+        description="Importar este arquivo substituirá todos os jogadores, times e configurações atuais. Esta ação não pode ser desfeita. Deseja continuar?"
         confirmLabel="Importar"
         onConfirm={handleConfirmImport}
       />

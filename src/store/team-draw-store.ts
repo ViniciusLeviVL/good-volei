@@ -58,6 +58,7 @@ export interface ITeamDrawStore {
   readonly replacePlayersAndTeams: (input: {
     readonly players: IPlayer[]
     readonly teams: ITeam[]
+    readonly settings?: IAppSettings
   }) => void
   readonly executeDraw: () =>
     | { success: true }
@@ -271,6 +272,7 @@ export const useTeamDrawStore = create<ITeamDrawStore>()(
         set({
           players: input.players,
           teams: input.teams,
+          ...(input.settings ? { settings: input.settings } : {}),
         })
       },
       executeDraw: () => {

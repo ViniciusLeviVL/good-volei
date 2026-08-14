@@ -5,7 +5,13 @@ import {
   MIN_PLAYER_SKILL,
   PLAYER_SKILL_STEP,
 } from '@/lib/constants'
-import { type IPlayer, type ITeam, PLAYER_GENDERS } from '@/types'
+import { normalizeDrawVarietySwapConfig } from '@/lib/draw-variety'
+import {
+  type IAppSettings,
+  type IPlayer,
+  type ITeam,
+  PLAYER_GENDERS,
+} from '@/types'
 
 export const TEAM_DRAW_EXPORT_VERSION = 1 as const
 
@@ -43,6 +49,7 @@ const importedPlayerSchema = z.object({
   gender: z.enum(PLAYER_GENDERS, {
     error: 'Selecione um gênero.',
   }),
+  isEnabled: z.boolean().optional().default(true),
 })
 
 const importedTeamSchema = z.object({
@@ -52,6 +59,17 @@ const importedTeamSchema = z.object({
     .trim()
     .min(1, 'O nome do time é obrigatório.')
     .max(40, 'O nome do time deve ter no máximo 40 caracteres.'),
+  playerIds: z.array(z.string().min(1)).optional().default([]),
+  lockedPlayerIds: z.array(z.string().min(1)).optional().default([]),
+})
+
+const importedSettingsSchema = z.object({
+  balanceByGender: z.boolean(),
+  drawVarietySwap: z.object({
+    attempts: z.number(),
+    maxSkillDelta: z.number(),
+    maxSpreadIncrease: z.number(),
+  }),
 })
 
 export const teamDrawImportSchema = z
@@ -67,46 +85,12 @@ export const teamDrawImportSchema = z
     data: z.object({
       players: z.array(importedPlayerSchema),
       teams: z.array(importedTeamSchema),
+      settings: importedSettingsSchema.optional(),
     }),
   })
   .superRefine((payload, context) => {
-    const playerIds = new Set<string>()
-    const playerNames = new Set<string>()
-    for (const player of payload.data.players) {
-      if (playerIds.has(player.id)) {
-        context.addIssue({
-          code: 'custom',
-          message: 'Há jogadores com ids duplicados.',
-          path: ['data', 'players'],
-        })
-        break
-      }
-      playerIds.add(player.id)
-
-      const normalizedName = player.name.trim().toLowerCase()
-      if (playerNames.has(normalizedName)) {
-        context.addIssue({
-          code: 'custom',
-          message: 'Há jogadores com nomes duplicados.',
-          path: ['data', 'players'],
-        })
-        break
-      }
-      playerNames.add(normalizedName)
-    }
-
-    const teamIds = new Set<string>()
-    for (const team of payload.data.teams) {
-      if (teamIds.has(team.id)) {
-        context.addIssue({
-          code: 'custom',
-          message: 'Há times com ids duplicados.',
-          path: ['data', 'teams'],
-        })
-        break
-      }
-      teamIds.add(team.id)
-    }
+    addDuplicateEntityIssues(payload, context)
+    addTeamAssignmentIssues(payload, context)
   })
 
 export type ITeamDrawImportSchema = z.infer<typeof teamDrawImportSchema>
@@ -116,11 +100,14 @@ export interface ITeamDrawExportPlayer {
   readonly name: string
   readonly stars: number
   readonly gender: IPlayer['gender']
+  readonly isEnabled: boolean
 }
 
 export interface ITeamDrawExportTeam {
   readonly id: string
   readonly name: string
+  readonly playerIds: readonly string[]
+  readonly lockedPlayerIds: readonly string[]
 }
 
 export interface ITeamDrawExportPayload {
@@ -129,12 +116,14 @@ export interface ITeamDrawExportPayload {
   readonly data: {
     readonly players: readonly ITeamDrawExportPlayer[]
     readonly teams: readonly ITeamDrawExportTeam[]
+    readonly settings: IAppSettings
   }
 }
 
 export interface IImportedTeamDrawData {
   readonly players: IPlayer[]
   readonly teams: ITeam[]
+  readonly settings?: IAppSettings
 }
 
 export interface IParseTeamDrawImportResult {
@@ -148,11 +137,12 @@ export interface IParseTeamDrawImportError {
 }
 
 /**
- * Builds the v1 export payload from the current roster and team names only.
+ * Builds the v1 export payload from the current roster, teams, and settings.
  */
 export function buildExportPayload(
   players: readonly IPlayer[],
   teams: readonly ITeam[],
+  settings: IAppSettings,
   exportedAt: string = new Date().toISOString(),
 ): ITeamDrawExportPayload {
   return {
@@ -164,11 +154,18 @@ export function buildExportPayload(
         name: player.name,
         stars: player.skill,
         gender: player.gender,
+        isEnabled: player.isEnabled,
       })),
       teams: teams.map((team) => ({
         id: team.id,
         name: team.name,
+        playerIds: [...team.playerIds],
+        lockedPlayerIds: [...team.lockedPlayerIds],
       })),
+      settings: {
+        balanceByGender: settings.balanceByGender,
+        drawVarietySwap: { ...settings.drawVarietySwap },
+      },
     },
   }
 }
@@ -218,16 +215,145 @@ function mapVersion1ToAppState(
     name: player.name.trim(),
     skill: player.stars,
     gender: player.gender,
-    isEnabled: true,
+    isEnabled: player.isEnabled,
   }))
-  const teams: ITeam[] = payload.data.teams.map((team) => ({
-    id: team.id,
-    name: team.name.trim(),
-    playerIds: [],
-    lockedPlayerIds: [],
-  }))
+  const enabledPlayerIds = new Set(
+    players.filter((player) => player.isEnabled).map((player) => player.id),
+  )
+  const teams: ITeam[] = payload.data.teams.map((team) => {
+    const playerIds = team.playerIds.filter((id) => enabledPlayerIds.has(id))
+    const playerIdSet = new Set(playerIds)
+    return {
+      id: team.id,
+      name: team.name.trim(),
+      playerIds,
+      lockedPlayerIds: team.lockedPlayerIds.filter((id) => playerIdSet.has(id)),
+    }
+  })
 
-  return { players, teams }
+  return {
+    players,
+    teams,
+    settings: mapImportedSettings(payload.data.settings),
+  }
+}
+
+function mapImportedSettings(
+  settings: ITeamDrawImportSchema['data']['settings'],
+): IAppSettings | undefined {
+  if (!settings) {
+    return undefined
+  }
+
+  return {
+    balanceByGender: settings.balanceByGender,
+    drawVarietySwap: normalizeDrawVarietySwapConfig(settings.drawVarietySwap),
+  }
+}
+
+function addDuplicateEntityIssues(
+  payload: ITeamDrawImportSchema,
+  context: z.RefinementCtx,
+): void {
+  const playerIds = new Set<string>()
+  const playerNames = new Set<string>()
+  for (const player of payload.data.players) {
+    if (playerIds.has(player.id)) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Há jogadores com ids duplicados.',
+        path: ['data', 'players'],
+      })
+      break
+    }
+    playerIds.add(player.id)
+
+    const normalizedName = player.name.trim().toLowerCase()
+    if (playerNames.has(normalizedName)) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Há jogadores com nomes duplicados.',
+        path: ['data', 'players'],
+      })
+      break
+    }
+    playerNames.add(normalizedName)
+  }
+
+  const teamIds = new Set<string>()
+  for (const team of payload.data.teams) {
+    if (teamIds.has(team.id)) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Há times com ids duplicados.',
+        path: ['data', 'teams'],
+      })
+      break
+    }
+    teamIds.add(team.id)
+  }
+}
+
+function addTeamAssignmentIssues(
+  payload: ITeamDrawImportSchema,
+  context: z.RefinementCtx,
+): void {
+  const knownPlayerIds = new Set(
+    payload.data.players.map((player) => player.id),
+  )
+  const assignedPlayerIds = new Set<string>()
+
+  for (const [teamIndex, team] of payload.data.teams.entries()) {
+    const teamPlayerIds = new Set<string>()
+    for (const [playerIndex, playerId] of team.playerIds.entries()) {
+      if (!knownPlayerIds.has(playerId)) {
+        context.addIssue({
+          code: 'custom',
+          message: 'Há jogadores atribuídos a times que não existem no elenco.',
+          path: ['data', 'teams', teamIndex, 'playerIds', playerIndex],
+        })
+        continue
+      }
+      if (teamPlayerIds.has(playerId)) {
+        context.addIssue({
+          code: 'custom',
+          message: 'Há jogadores duplicados no mesmo time.',
+          path: ['data', 'teams', teamIndex, 'playerIds', playerIndex],
+        })
+        continue
+      }
+      if (assignedPlayerIds.has(playerId)) {
+        context.addIssue({
+          code: 'custom',
+          message: 'Há jogadores atribuídos a mais de um time.',
+          path: ['data', 'teams', teamIndex, 'playerIds', playerIndex],
+        })
+        continue
+      }
+      teamPlayerIds.add(playerId)
+      assignedPlayerIds.add(playerId)
+    }
+
+    const lockedPlayerIds = new Set<string>()
+    for (const [lockIndex, playerId] of team.lockedPlayerIds.entries()) {
+      if (lockedPlayerIds.has(playerId)) {
+        context.addIssue({
+          code: 'custom',
+          message: 'Há jogadores bloqueados duplicados no mesmo time.',
+          path: ['data', 'teams', teamIndex, 'lockedPlayerIds', lockIndex],
+        })
+        continue
+      }
+      lockedPlayerIds.add(playerId)
+      if (!teamPlayerIds.has(playerId)) {
+        context.addIssue({
+          code: 'custom',
+          message: 'Há jogadores bloqueados que não pertencem ao time.',
+          path: ['data', 'teams', teamIndex, 'lockedPlayerIds', lockIndex],
+        })
+      }
+    }
+  }
 }
 
 /**
