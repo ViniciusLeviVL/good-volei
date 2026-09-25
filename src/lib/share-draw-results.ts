@@ -7,11 +7,16 @@ import type { IPlayer, ITeam } from '@/types'
 
 export interface IShareTeamResult {
   readonly name: string
-  readonly playerNames: readonly string[]
+  readonly players: readonly ISharePlayerResult[]
   readonly playerCount: number
   readonly skillAverage: number
   readonly maleCount: number
   readonly femaleCount: number
+}
+
+export interface ISharePlayerResult {
+  readonly name: string
+  readonly skill: number
 }
 
 const IMAGE_WIDTH = 720
@@ -49,13 +54,20 @@ export function buildShareTeamResults(
 
     return {
       name: team.name,
-      playerNames: teamPlayers.map((player) => player.name),
+      players: teamPlayers.map((player) => ({
+        name: player.name,
+        skill: player.skill,
+      })),
       playerCount: stats.playerCount,
       skillAverage: stats.skillAverage,
       maleCount: stats.maleCount,
       femaleCount: stats.femaleCount,
     }
   })
+}
+
+function formatPlayerStars(skill: number): string {
+  return `${skill.toFixed(1)} ⭐`
 }
 
 /**
@@ -71,11 +83,11 @@ export function formatWhatsAppDrawText(
       team.playerCount === 1 ? '1 jogador' : `${team.playerCount} jogadores`
     lines.push(`*${team.name}* (${playerLabel})`)
 
-    if (team.playerNames.length === 0) {
+    if (team.players.length === 0) {
       lines.push('• Sem jogadores')
     } else {
-      for (const playerName of team.playerNames) {
-        lines.push(`• ${playerName}`)
+      for (const player of team.players) {
+        lines.push(`• ${formatPlayerStars(player.skill)} ${player.name}`)
       }
     }
 
@@ -226,7 +238,7 @@ function roundRect(
 
 function calculateImageHeight(teams: readonly IShareTeamResult[]): number {
   const teamsHeight = teams.reduce((total, team, index) => {
-    const playerRows = Math.max(team.playerNames.length, 1)
+    const playerRows = Math.max(team.players.length, 1)
     const cardHeight =
       TEAM_HEADER_HEIGHT +
       PLAYER_LIST_TOP +
@@ -273,7 +285,7 @@ export async function createDrawResultsImageBlob(
   const cardWidth = IMAGE_WIDTH - IMAGE_PADDING * 2
 
   for (const [index, team] of teams.entries()) {
-    const playerRows = Math.max(team.playerNames.length, 1)
+    const playerRows = Math.max(team.players.length, 1)
     const cardHeight =
       TEAM_HEADER_HEIGHT +
       PLAYER_LIST_TOP +
@@ -320,21 +332,35 @@ export async function createDrawResultsImageBlob(
     let playerY =
       currentY + TEAM_HEADER_HEIGHT + PLAYER_LIST_TOP + PLAYER_ROW_HEIGHT - 8
 
-    if (team.playerNames.length === 0) {
+    if (team.players.length === 0) {
       context.fillStyle = COLORS.muted
       context.font = '500 15px system-ui, sans-serif'
       context.fillText('Sem jogadores', IMAGE_PADDING + 20, playerY)
     } else {
-      for (const playerName of team.playerNames) {
+      for (const player of team.players) {
         context.fillStyle = COLORS.primary
         context.beginPath()
         context.arc(IMAGE_PADDING + 26, playerY - 4, 3.5, 0, Math.PI * 2)
         context.fill()
 
+        const starsText = formatPlayerStars(player.skill)
+        context.fillStyle = COLORS.muted
+        context.font = '600 13px system-ui, sans-serif'
+        const starsWidth = context.measureText(starsText).width
+        context.fillText(
+          starsText,
+          IMAGE_PADDING + cardWidth - 20 - starsWidth,
+          playerY,
+        )
+
         context.fillStyle = COLORS.foreground
         context.font = '500 16px system-ui, sans-serif'
         context.fillText(
-          truncateCanvasText(context, playerName, textMaxWidth - 20),
+          truncateCanvasText(
+            context,
+            player.name,
+            Math.max(80, textMaxWidth - starsWidth - 36),
+          ),
           IMAGE_PADDING + 40,
           playerY,
         )
